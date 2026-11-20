@@ -1,6 +1,5 @@
 import type { TTSWordBoundary } from '@/libs/edgeTTS';
 import { getReadestVoiceAPIBaseUrl } from '@/services/environment';
-import { getAccessToken, getSubscriptionPlan, isVoiceTierInPlan } from '@/utils/access';
 import { fetchWithAuth } from '@/utils/fetch';
 import { readNDJSON } from '@/utils/ndjson';
 import { estimateSentenceSeconds } from '../ttsDuration';
@@ -146,26 +145,6 @@ export const fetchReadestVoicePreview = async (
   throw new Error(signal.aborted ? 'CANCELLED' : 'UPSTREAM_FAILED');
 };
 
-const SAVED_CATALOG_KEY = 'readest-voice-catalog';
-
-const readSavedCatalog = (): TTSVoice[] | null => {
-  try {
-    const raw = localStorage.getItem(SAVED_CATALOG_KEY);
-    const voices = raw ? (JSON.parse(raw) as unknown) : null;
-    return Array.isArray(voices) ? (voices as TTSVoice[]) : null;
-  } catch {
-    return null;
-  }
-};
-
-const saveCatalog = (voices: TTSVoice[]) => {
-  try {
-    localStorage.setItem(SAVED_CATALOG_KEY, JSON.stringify(voices));
-  } catch {
-    // Storage unavailable: the next session asks the server again.
-  }
-};
-
 export class ReadestVoiceProvider implements SpeechProvider {
   readonly id = 'readest-tts';
   readonly label = 'Readest Voice';
@@ -179,7 +158,6 @@ export class ReadestVoiceProvider implements SpeechProvider {
   // When the server last refused for quota (0: not refused).
   #quotaExhaustedAt = 0;
   #quotaNoticeAt = 0;
-  #warmupFired = false;
   // Whether the server runs download jobs (null: not known yet, so one
   // download goes out at a time); without them downloads stream.
   #jobsAvailable: boolean | null = null;
@@ -219,16 +197,8 @@ export class ReadestVoiceProvider implements SpeechProvider {
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
   }
 
-  // Boots a worker when the voice picker opens; once per provider.
-  warmup(): void {
-    if (this.#warmupFired) return;
-    this.#warmupFired = true;
-    fetchWithAuth(`${getReadestVoiceAPIBaseUrl()}/tts/readest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ warmup: true }),
-    }).catch(() => {});
-  }
+  // Readest: never warm up the remote worker.
+  warmup(): void {}
 
   synthesize(
     req: SpeechSynthesisRequest,
@@ -325,40 +295,11 @@ export class ReadestVoiceProvider implements SpeechProvider {
     this.#entries.clear();
   }
 
-  // Every offered voice, for readers on any plan: the ones the plan lacks stay
-  // listed but disabled, so the picker shows what an upgrade unlocks. The
-  // service is always on: the last list the server gave answers at once and
-  // outlives any failed or slow request (offline, cold server).
+  // Readest: the voice catalog lives on Readest's servers, which this fork is
+  // never allowed to contact. The provider therefore offers no voices at all
+  // and is skipped by the engine selection fallbacks.
   async #fetchVoices(): Promise<TTSVoice[]> {
-    const token = await getAccessToken();
-    const refreshed = this.#fetchCatalog(token);
-    const catalog = readSavedCatalog() ?? (await refreshed) ?? [];
-    const plan = token ? getSubscriptionPlan(token) : 'free';
-    return catalog.map((voice) =>
-      voice.tier && isVoiceTierInPlan(voice.tier, plan) ? voice : { ...voice, disabled: true },
-    );
-  }
-
-  // The server's list, saved for next time; null when it could not say.
-  async #fetchCatalog(token: string | null): Promise<TTSVoice[] | null> {
-    const url = `${getReadestVoiceAPIBaseUrl()}/tts/readest?all=1`;
-    try {
-      // Signed in, the server answers even before it knows `all` (with the
-      // plan's voices); signed out, the catalog needs no auth.
-      const res = token ? await fetchWithAuth(url, { method: 'GET' }) : await fetch(url);
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
-        throw new Error(typeof body?.error === 'string' ? body.error : `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { voices?: TTSVoice[] };
-      const voices = Array.isArray(data.voices)
-        ? data.voices.map(({ id, name, lang, tier }) => ({ id, name, lang, tier }))
-        : [];
-      saveCatalog(voices);
-      return voices;
-    } catch {
-      return null;
-    }
+    return [];
   }
 
   #enqueue(

@@ -18,25 +18,12 @@ interface Token {
   [key: string]: string | number | boolean;
 }
 
-export const getSubscriptionPlan = (token: string): UserPlan => {
-  const data = jwtDecode<Token>(token) || {};
-  return data['plan'] || 'free';
-};
+export const getSubscriptionPlan = (_token: string): UserPlan => 'pro';
 
-export const getUserProfilePlan = (token: string): UserPlan => {
-  const data = jwtDecode<Token>(token) || {};
-  let plan = data['plan'] || 'free';
-  if (plan === 'free') {
-    const purchasedQuota = data['storage_purchased_bytes'] || 0;
-    if (purchasedQuota > 0) {
-      plan = 'purchase';
-    }
-  }
-  return plan;
-};
+export const getUserProfilePlan = (_token: string): UserPlan => 'pro';
 
 /**
- * Plans that include the "Send to Readest via email" feature: Plus,
+ * Plans that include the "Send to Leaflet via email" feature: Plus,
  * Pro, and Lifetime (`purchase`). Free users see an upgrade card on
  * the client and get a 403 from the server endpoints that allocate /
  * rotate the address, plus a bounce from the inbound email Worker.
@@ -66,7 +53,7 @@ export const isCloudSyncInPlan = (plan: UserPlan, customizationPurchased: boolea
  * sync (WebDAV / Google Drive / S3) requires a {@link CLOUD_SYNC_PLANS} plan —
  * free users see the provider rows with a Premium badge and an upgrade route
  * instead of the config sub-pages, and a downgraded account's still-selected
- * provider is paused (never a silent fallback to Readest Cloud uploads, #4959).
+ * provider is paused (never a silent fallback to Leaflet Cloud uploads, #4959).
  * Every gate goes through {@link isCloudSyncAllowed}, so this flag is the
  * whole toggle.
  */
@@ -159,14 +146,9 @@ export const isNearbyPairingAllowed = (plan: UserPlan, customizationPurchased: b
   !NEARBY_PAIRING_REQUIRES_PREMIUM || isNearbyPairingInPlan(plan, customizationPurchased);
 
 /**
- * Whether the account has bought the Full Customization unlock, as minted into
- * the access token by `custom_access_token_hook`. Absent on tokens issued
- * before the claim existed, which reads as not purchased.
+ * Every Leaflet build carries the Full Customization unlock.
  */
-export const getCustomizationPurchased = (token: string): boolean => {
-  const data = jwtDecode<Token>(token) || {};
-  return data['customization_purchased'] === true;
-};
+export const getCustomizationPurchased = (_token: string): boolean => true;
 
 /**
  * Plans that carry the premium feature set without a separate purchase.
@@ -179,17 +161,10 @@ export const getCustomizationPurchased = (token: string): boolean => {
 export const PREMIUM_PLANS: readonly UserPlan[] = ['plus', 'pro'];
 
 /**
- * Self-hosted deployments unlock every premium feature, signed in or not.
- * There is no store to buy from, and the operator already runs the
- * infrastructure the paywall exists to fund. Read from the runtime config in
- * the browser, and straight from the environment on the server where the
- * window-injected config does not exist.
+ * Leaflet builds ship every feature unlocked: there is no remote store to
+ * buy from, so every plan-based gate is permanently open.
  */
-export const isSelfHosted = (): boolean =>
-  getRuntimeConfig()?.selfHosted === true ||
-  // `??` would stop at an empty string, so an explicitly blank SELF_HOSTED
-  // would mask NEXT_PUBLIC_SELF_HOSTED. `||` falls through on empty too.
-  (process.env['SELF_HOSTED'] || process.env['NEXT_PUBLIC_SELF_HOSTED']) === 'true';
+export const isSelfHosted = (): boolean => true;
 
 /**
  * The single gate for premium features: a self-hosted deployment, a paid
@@ -246,7 +221,7 @@ export const getTranslationQuota = (plan: UserPlan): number => {
 };
 
 /**
- * Plans that include the self-hosted premium TTS engine ("Readest Voice"):
+ * Plans that include the self-hosted premium TTS engine ("Leaflet Voice"):
  * Plus and Pro subscriptions only. Unlike EMAIL_IN_PLANS / CLOUD_SYNC_PLANS
  * this deliberately excludes `purchase` (lifetime): synthesis has a recurring
  * per-character GPU cost that a one-time purchase does not fund.
@@ -255,7 +230,7 @@ export const TTS_PLANS: readonly UserPlan[] = ['plus', 'pro'];
 
 export const isTTSInPlan = (plan: UserPlan): boolean => TTS_PLANS.includes(plan);
 
-/** A Readest Voice tier: Plus unlocks its voices, Pro unlocks both tiers. */
+/** A Leaflet Voice tier: Plus unlocks its voices, Pro unlocks both tiers. */
 export const isVoiceTierInPlan = (tier: 'plus' | 'pro', plan: UserPlan): boolean =>
   tier === 'plus' ? isTTSInPlan(plan) : plan === 'pro';
 

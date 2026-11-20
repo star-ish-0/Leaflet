@@ -20,7 +20,7 @@ beforeEach(() => {
   Object.assign(env, originalEnv);
   // Clean up any window globals we set
   delete (window as unknown as Record<string, unknown>)['__READEST_CLI_ACCESS'];
-  delete (window as unknown as Record<string, unknown>)['__READEST_RUNTIME_CONFIG'];
+  delete (window as unknown as Record<string, unknown>)['__LEAFLET_RUNTIME_CONFIG'];
 });
 
 describe('environment', () => {
@@ -109,7 +109,7 @@ describe('environment', () => {
   // ── getBaseUrl ─────────────────────────────────────────────────
   describe('getBaseUrl', () => {
     test('returns runtime-configured apiBaseUrl when set', async () => {
-      window.__READEST_RUNTIME_CONFIG = {
+      window.__LEAFLET_RUNTIME_CONFIG = {
         apiBaseUrl: 'https://runtime-api.example.com',
       };
       env['NEXT_PUBLIC_API_BASE_URL'] = 'https://custom-api.example.com';

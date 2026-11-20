@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <!-- LocalSend device discovery: receiving multicast announcements needs a
          MulticastLock, which requires these two permissions. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
@@ -9,10 +8,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <uses-permission android:name="com.android.vending.BILLING" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -23,15 +18,10 @@
         android:largeHeap="true"
         android:enableOnBackInvokedCallback="false"
         android:label="@string/app_name"
-        android:theme="@style/Theme.readest"
+        android:theme="@style/Theme.leaflet"
         android:hardwareAccelerated="true"
-        android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
 
-        <!-- requestLegacyExternalStorage: Android 10 has no All Files Access,
-             so without it scoped storage hides shared-storage files from the
-             path reads that folder import and read-in-place use (#7542).
-             Android 11+ ignores it for apps targeting API 30+. -->
 
         <!-- Android Auto opt-in. Play's Auto review rejected version code
              11020 ("Audio inconsistently plays on the Android Auto
@@ -49,9 +39,6 @@
         <!-- Sentry auto-init (ContentProvider). Empty DSN => disabled. Release
              is auto-detected from versionName; performance and PII stay at
              their safe off/false defaults. -->
-        <meta-data android:name="io.sentry.dsn" android:value="${sentryDsn}" />
-        <meta-data android:name="io.sentry.environment" android:value="production" />
-        <meta-data android:name="io.sentry.ndk.enable" android:value="false" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|navigation|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -133,13 +120,6 @@
                 <data android:mimeType="*/*"/>
             </intent-filter>
 
-            <intent-filter android:label="oauth">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest" android:host="auth-callback" />
-            </intent-filter>
-
             <!-- Google Drive OAuth reverse-DNS redirect (iOS-type client). Mirrors
                  the deep-link.mobile scheme in tauri.conf.json so the redirect
                  routes back even if the auto-generated section is regenerated. -->
@@ -157,7 +137,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest-onedrive" android:host="auth" />
+                <data android:scheme="leaflet-onedrive" android:host="auth" />
             </intent-filter>
 
             <intent-filter>
@@ -167,39 +147,13 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <!-- DEEP LINK PLUGIN. AUTO-GENERATED. DO NOT REMOVE. -->
-            <intent-filter android:autoVerify="true" >
-                <action android:name="android.intent.action.VIEW" />
-                <!-- ChromeOS ARC++ uses a different action for deep links -->
-                <action android:name="org.chromium.arc.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
-                <data android:host="web.readest.com" />
-                
-                
-                
-                
-            </intent-filter>
             <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <!-- ChromeOS ARC++ uses a different action for deep links -->
                 <action android:name="org.chromium.arc.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest" />
-                
-                
-                
-                
-                
-            </intent-filter>
-            <intent-filter >
-                <action android:name="android.intent.action.VIEW" />
-                <!-- ChromeOS ARC++ uses a different action for deep links -->
-                <action android:name="org.chromium.arc.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="readest-onedrive" />
+                <data android:scheme="leaflet-onedrive" />
                 
                 
                 
@@ -308,7 +262,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/x-readest-books" />
+                <data android:mimeType="application/x-leaflet-books" />
                 <data android:pathPattern=".*\\.rbooks" />
             </intent-filter>
             
@@ -324,7 +278,7 @@
         </receiver>
 
         <service
-          android:name="com.readest.native_tts.MediaPlaybackService"
+          android:name="com.leaflet.native_tts.MediaPlaybackService"
           android:foregroundServiceType="mediaPlayback"
           android:exported="true">
           <intent-filter>

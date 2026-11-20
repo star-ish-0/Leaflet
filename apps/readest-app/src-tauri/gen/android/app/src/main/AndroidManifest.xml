@@ -278,7 +278,7 @@
         </receiver>
 
         <service
-          android:name="com.leaflet.native_tts.MediaPlaybackService"
+          android:name="com.readest.native_tts.MediaPlaybackService"
           android:foregroundServiceType="mediaPlayback"
           android:exported="true">
           <intent-filter>

@@ -87,15 +87,15 @@ for (const [stage, fullRefresh] of [false, true].entries()) {
       expect(h.pull).toHaveBeenCalledWith(fullRefresh, true);
     });
 
-    it('prompts for sign-in when the only file backend is paused by the plan gate', async () => {
+    it('pulls from the file backend for a free user — no plan gate pauses sync', async () => {
       setCachedUserPlan('free');
       const settings = useSettingsStore.getState().settings;
       useSettingsStore.setState({
         settings: { ...settings, webdav: { ...settings.webdav, enabled: true } },
       });
       await refresh();
-      expect(h.login).toHaveBeenCalledWith(h.router);
-      expect(h.pull).not.toHaveBeenCalled();
+      expect(h.login).not.toHaveBeenCalled();
+      expect(h.pull).toHaveBeenCalledWith(fullRefresh, true);
     });
 
     it('refreshes OPDS even when a configured file backend is paused', async () => {

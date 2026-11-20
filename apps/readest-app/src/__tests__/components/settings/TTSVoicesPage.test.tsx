@@ -126,6 +126,7 @@ describe('TTSVoicesPage', () => {
     localStorage.clear();
     state.user = { id: 'u' };
     state.range = null;
+    state.push.mockReset();
     state.play.mockReset().mockResolvedValue(undefined);
   });
 
@@ -186,11 +187,13 @@ describe('TTSVoicesPage', () => {
     });
   });
 
-  it('a signed-out reader is sent to sign in to preview Readest Voice, not other engines', async () => {
+  it('a signed-out reader previewing Readest Voice is navigated nowhere — no sign-in exists', async () => {
     state.user = null;
     renderPage();
     fireEvent.click(await screen.findByLabelText('Preview Heart'));
-    expect(state.push).toHaveBeenCalledWith(expect.stringMatching(/^\/auth/));
+    expect(state.push).not.toHaveBeenCalled();
+    // The hosted Readest Voice service is gone with it, so nothing plays;
+    // other engines preview unaffected.
     expect(state.play).not.toHaveBeenCalled();
     fireEvent.click(screen.getByLabelText('Preview Ryan'));
     await waitFor(() => expect(state.play).toHaveBeenCalled());

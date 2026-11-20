@@ -6,7 +6,7 @@ import { getRuntimeConfig } from '@/services/runtimeConfig';
 const runConfigScript = async () => new Function(await GET().text())();
 
 beforeEach(() => {
-  delete window.__LEAFLET_RUNTIME_CONFIG;
+  delete window.__READEST_RUNTIME_CONFIG;
   localStorage.clear();
   vi.unstubAllEnvs();
   vi.stubEnv('NEXT_PUBLIC_APP_PLATFORM', 'web');
@@ -20,7 +20,7 @@ describe('runtime config on a cached page load', () => {
     vi.stubEnv('SUPABASE_PUBLIC_URL', 'https://supabase.self-hosted.test');
     await runConfigScript();
     // The next page load, before its /runtime-config.js has run.
-    delete window.__LEAFLET_RUNTIME_CONFIG;
+    delete window.__READEST_RUNTIME_CONFIG;
 
     expect(getRuntimeConfig()?.supabaseUrl, "the server's Supabase URL").toBe(
       'https://supabase.self-hosted.test',

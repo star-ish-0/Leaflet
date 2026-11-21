@@ -172,7 +172,7 @@ describe('navigateToReader', () => {
 });
 
 describe('navigateToLogin', () => {
-  test('navigates to /auth with redirect from current path', () => {
+  test('is a no-op: Leaflet has no account sign-in anywhere', () => {
     Object.defineProperty(window, 'location', {
       value: { pathname: '/library', search: '?q=test' },
       writable: true,
@@ -181,12 +181,11 @@ describe('navigateToLogin', () => {
     const router = mockRouter();
     navigateToLogin(router);
 
-    const url = router.push.mock.calls[0]![0] as string;
-    expect(url).toContain('/auth?redirect=');
-    expect(url).toContain(encodeURIComponent('/library?q=test'));
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
-  test('uses / as redirect when already on /auth', () => {
+  test('does nothing even when a caller thinks it is already on /auth', () => {
     Object.defineProperty(window, 'location', {
       value: { pathname: '/auth', search: '' },
       writable: true,
@@ -195,8 +194,7 @@ describe('navigateToLogin', () => {
     const router = mockRouter();
     navigateToLogin(router);
 
-    const url = router.push.mock.calls[0]![0] as string;
-    expect(url).toBe('/auth?redirect=%2F');
+    expect(router.push).not.toHaveBeenCalled();
   });
 });
 
@@ -425,7 +423,7 @@ describe('showReaderWindow', async () => {
     const options = constructorCall[1]!;
     // The overlay title bar hides its title text natively, so the window is
     // named like every other platform's.
-    expect(options.title).toBe('Readest');
+    expect(options.title).toBe('Leaflet');
     expect(options.decorations).toBe(true);
     expect(options.titleBarStyle).toBe('overlay');
   });
@@ -436,7 +434,7 @@ describe('showReaderWindow', async () => {
 
     const constructorCall = vi.mocked(WebviewWindow).mock.calls[0]!;
     const options = constructorCall[1]!;
-    expect(options.title).toBe('Readest');
+    expect(options.title).toBe('Leaflet');
     expect(options.decorations).toBe(false);
     expect(options.transparent).toBe(true);
     expect(options.shadow).toBe(true);

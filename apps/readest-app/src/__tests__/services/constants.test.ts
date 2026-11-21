@@ -13,6 +13,7 @@ vi.mock('@/utils/misc', () => ({
 
 import {
   DATA_SUBDIR,
+  LOCAL_DATA_SUBDIR,
   LOCAL_BOOKS_SUBDIR,
   CLOUD_BOOKS_SUBDIR,
   LOCAL_FONTS_SUBDIR,
@@ -105,20 +106,20 @@ describe('services/constants', () => {
       expect(DATA_SUBDIR.length).toBeGreaterThan(0);
     });
 
-    it('LOCAL_BOOKS_SUBDIR contains DATA_SUBDIR', () => {
-      expect(LOCAL_BOOKS_SUBDIR).toContain(DATA_SUBDIR);
+    it('LOCAL_BOOKS_SUBDIR contains LOCAL_DATA_SUBDIR', () => {
+      expect(LOCAL_BOOKS_SUBDIR).toContain(LOCAL_DATA_SUBDIR);
     });
 
     it('CLOUD_BOOKS_SUBDIR contains DATA_SUBDIR', () => {
       expect(CLOUD_BOOKS_SUBDIR).toContain(DATA_SUBDIR);
     });
 
-    it('LOCAL_FONTS_SUBDIR contains DATA_SUBDIR', () => {
-      expect(LOCAL_FONTS_SUBDIR).toContain(DATA_SUBDIR);
+    it('LOCAL_FONTS_SUBDIR contains LOCAL_DATA_SUBDIR', () => {
+      expect(LOCAL_FONTS_SUBDIR).toContain(LOCAL_DATA_SUBDIR);
     });
 
-    it('LOCAL_IMAGES_SUBDIR contains DATA_SUBDIR', () => {
-      expect(LOCAL_IMAGES_SUBDIR).toContain(DATA_SUBDIR);
+    it('LOCAL_IMAGES_SUBDIR contains LOCAL_DATA_SUBDIR', () => {
+      expect(LOCAL_IMAGES_SUBDIR).toContain(LOCAL_DATA_SUBDIR);
     });
 
     it('SETTINGS_FILENAME ends with .json', () => {

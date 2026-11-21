@@ -1,0 +1,137 @@
+# Leaflet Android APK.
+#
+# Mirrors the Android leg of upstream nightly.yml (build/signing steps), minus
+# every Readest Cloud secret: no PostHog, Supabase, or Sentry credentials go in.
+# The APK is for direct sideloading — it reads only its own app-scoped storage.
+#
+# Signing: when the repo configures the ANDROID_* secrets (a release keystore),
+# the APK is signed with it; otherwise a fresh ephemeral keystore is generated
+# per run. NOTE: an ephemeral key means every build needs a reinstall over the
+# previous one — configure the secrets for stable in-place updates.
+
+name: Leaflet Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'vibe/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: leaflet-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      NDK_VERSION: '28.2.13676358'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - name: setup node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: setup Java
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: setup Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        with:
+          packages: 'platform-tools'
+
+      - name: install NDK
+        run: sdkmanager "ndk;$NDK_VERSION"
+
+      - name: install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          key: leaflet-apk-cargo
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: set up app version
+        run: echo "LEAFLET_VERSION=$(node -p "require('./apps/readest-app/package.json').version")" >> $GITHUB_ENV
+
+      - name: copy pdfjs-dist and simplecc-dist to public directory
+        run: pnpm --filter @readest/readest-app setup-vendors
+
+      - name: create .env.local for Next.js (no cloud credentials)
+        run: |
+          echo "NEXT_PUBLIC_APP_PLATFORM=tauri" > .env.local
+          cp .env.local apps/readest-app/.env.local
+
+      # `pnpm tauri android init` regenerates the gradle project; the tracked
+      # files (MainActivity, manifest, gradle customizations) are restored so
+      # Leaflet's app-scoped-storage build ships instead of the template.
+      - name: build and sign APK
+        shell: bash
+        timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
+        run: |
+          set -euo pipefail
+          cd apps/readest-app/
+          rm -rf src-tauri/gen/android
+          pnpm tauri android init
+          pnpm tauri icon ../../data/icons/readest-book.png
+          git checkout .
+
+          pushd src-tauri/gen/android
+          if [ -n "${{ secrets.ANDROID_KEY_BASE64 }}" ]; then
+            echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+            echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+            base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > "$RUNNER_TEMP/keystore.jks"
+            echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+          else
+            : "${ANDROID_KEY_ALIAS:=leaflet}"
+            : "${ANDROID_KEY_PASSWORD:=leaflet}"
+            echo "keyAlias=$ANDROID_KEY_ALIAS" > keystore.properties
+            echo "password=$ANDROID_KEY_PASSWORD" >> keystore.properties
+            keytool -genkeypair -v \
+              -keystore "$RUNNER_TEMP/keystore.jks" \
+              -alias "$ANDROID_KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$ANDROID_KEY_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" \
+              -dname "CN=Leaflet, OU=Leaflet, O=Leaflet, L=Leaflet, ST=Leaflet, C=BR"
+            echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+            echo "::warning::No ANDROID_KEY_BASE64 secret configured — the APK is signed with an ephemeral key; reinstall over an older build will not update in place."
+          fi
+          popd
+
+          pnpm tauri android build -t aarch64
+          mkdir -p ../../apks
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+            "../../apks/Leaflet_${LEAFLET_VERSION}_arm64.apk"
+
+      - name: upload APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Leaflet-${{ env.LEAFLET_VERSION }}-arm64-apk
+          path: apks/Leaflet_*_arm64.apk
+          if-no-files-found: error

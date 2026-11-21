@@ -527,14 +527,8 @@ describe('VocabularyView Anki link', () => {
     dispatch.mockRestore();
   });
 
-  it('does not pull on open without access, or for a free account', async () => {
+  it('does not pull on open when AnkiDroid permission is not granted', async () => {
     anki.ankiStatus.mockResolvedValue({ installed: true, granted: false });
-    renderWithMenu();
-    await syncButton();
-    await settle();
-    cleanup();
-    anki.ankiStatus.mockResolvedValue({ installed: true, granted: true });
-    account.plan = 'free';
     renderWithMenu();
     await syncButton();
     await settle();
@@ -542,12 +536,21 @@ describe('VocabularyView Anki link', () => {
     expect(anki.ankiRequestPermission).not.toHaveBeenCalled();
   });
 
-  it('pulls once on open when the plan arrives after AnkiDroid answers', async () => {
+  it('pulls on open for a free account too — Anki has no plan gate', async () => {
+    anki.ankiStatus.mockResolvedValue({ installed: true, granted: true });
+    account.plan = 'free';
+    renderWithMenu();
+    await syncButton();
+    await settle();
+    expect(anki.ankiListDecks).toHaveBeenCalledTimes(1);
+  });
+
+  it('pulls on open even while the plan is still loading', async () => {
     account.plan = undefined;
     const view = renderWithMenu();
     await syncButton();
     await settle();
-    expect(anki.ankiListDecks).not.toHaveBeenCalled();
+    expect(anki.ankiListDecks).toHaveBeenCalledTimes(1);
     account.plan = 'plus';
     for (let i = 0; i < 2; i++) {
       view.rerender(
@@ -557,6 +560,7 @@ describe('VocabularyView Anki link', () => {
       );
       await settle();
     }
+    // Still exactly the one open-time pull.
     expect(anki.ankiListDecks).toHaveBeenCalledTimes(1);
   });
 
@@ -572,18 +576,18 @@ describe('VocabularyView Anki link', () => {
     expect(anki.ankiStatus).toHaveBeenCalledTimes(3);
   });
 
-  it('sends a free account to the plans page instead of syncing', async () => {
+  it('syncs for a free account — there is no plan gate', async () => {
     account.plan = 'free';
     renderWithMenu();
     const sync = await syncButton();
     expect(sync.textContent).not.toContain('Premium');
     fireEvent.click(sync);
-    expect(push).toHaveBeenCalledWith(expect.stringContaining('/user?redirect='));
+    await waitFor(() => expect(anki.ankiAddNotes).toHaveBeenCalled());
+    expect(push).not.toHaveBeenCalled();
     openMenu('More');
-    expect(screen.getByRole('menuitem', { name: /Import Anki Deck/ }).textContent).toContain(
+    expect(screen.getByRole('menuitem', { name: /Import Anki Deck/ }).textContent).not.toContain(
       'Premium',
     );
-    expect(anki.ankiStatus).toHaveBeenCalledTimes(1);
   });
 
   it('imports a deck from the menu, bringing a mature new word in as Mastered', async () => {
@@ -662,14 +666,14 @@ describe('VocabularyView Anki link', () => {
     expect((saveFile.mock.calls[0] as unknown as [string])[0]).toBe('readest-vocabulary-anki.txt');
   });
 
-  it('gates the Anki file export behind premium', () => {
+  it('exports the Anki file for a free account — no premium gate', async () => {
     appService.isAndroidApp = false;
     account.plan = 'free';
     renderWithMenu();
     openMenu('Export');
     fireEvent.click(screen.getByRole('menuitem', { name: /Export to Anki/ }));
-    expect(push).toHaveBeenCalledWith(expect.stringContaining('/user?redirect='));
-    expect(saveFile).not.toHaveBeenCalled();
+    await waitFor(() => expect(saveFile).toHaveBeenCalled());
+    expect(push).not.toHaveBeenCalledWith(expect.stringContaining('/user?redirect='));
   });
 
   it('reads the Readest deck together with its subdecks', async () => {

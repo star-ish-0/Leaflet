@@ -32,6 +32,9 @@
       "allow": [
         {
           "path": "$APPDATA/Readest/**/*"
+        },
+        {
+          "path": "$DOCUMENT/Leaflet/**/*"
         }
       ],
       "deny": []
@@ -60,6 +63,12 @@
         },
         {
           "path": "**/Readest/**/*"
+        },
+        {
+          "path": "**/Leaflet"
+        },
+        {
+          "path": "**/Leaflet/**/*"
         },
         {
           "path": "**/com.github.johnfactotum.Foliate/**/*"

@@ -35,7 +35,7 @@ const createReaderWindow = async (appService: AppService, url: string) => {
     height: 600,
     center: true,
     resizable: true,
-    title: 'Readest',
+    title: 'Leaflet',
     decorations: !!appService.isMacOSApp,
     // Linux stays opaque: a transparent WebKitGTK window turns invisible when
     // its web process is busy (#3682). macOS uses native decorations instead.
@@ -94,7 +94,7 @@ export const ensureMainLibraryWindow = async (appService: AppService) => {
     height: 600,
     center: true,
     resizable: true,
-    title: 'Readest',
+    title: 'Leaflet',
     decorations: !!appService.isMacOSApp,
     // Linux stays opaque: a transparent WebKitGTK window turns invisible when
     // its web process is busy (#3682). macOS uses native decorations instead.
@@ -126,11 +126,9 @@ export const navigateToReader = (
   }
 };
 
-export const navigateToLogin = (router: ReturnType<typeof useRouter>) => {
-  const pathname = window.location.pathname;
-  const search = window.location.search;
-  const currentPath = pathname !== '/auth' ? pathname + search : '/';
-  router.push(`/auth?redirect=${encodeURIComponent(currentPath)}`);
+export const navigateToLogin = (_router: ReturnType<typeof useRouter>) => {
+  // Leaflet: there is no account sign-in anywhere; remote-service entry points
+  // have been removed, so this is a deliberate no-op.
 };
 
 export const navigateToHardcoverConnect = (router: ReturnType<typeof useRouter>) => {

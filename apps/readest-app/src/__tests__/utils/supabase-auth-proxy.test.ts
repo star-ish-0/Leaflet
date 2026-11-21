@@ -2,7 +2,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const CLOUD_URL = 'https://vbsyxfusjjqdxkjqlysc.supabase.co';
-const PROXY_URL = 'https://auth-cf.readest.com';
 
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -38,100 +37,36 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('Readest Cloud auth routing (#6416)', () => {
-  it('sends the password sign-in through the proxy', async () => {
+// Leaflet removed the Readest Cloud auth proxy: every auth call goes straight
+// to whatever Supabase host the deployment configures, and no readest.com
+// host may ever be contacted.
+describe('auth routing has no Readest proxy', () => {
+  it('sends the password sign-in straight to the configured host', async () => {
     const supabase = await loadClient(CLOUD_URL);
 
     const { error } = await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
 
     expect(error).toBeNull();
-    expect(requestedUrls()).toEqual([`${PROXY_URL}/auth/v1/token?grant_type=password`]);
+    expect(requestedUrls()).toEqual([`${CLOUD_URL}/auth/v1/token?grant_type=password`]);
   });
 
-  it('refreshes the session through the proxy', async () => {
+  it('refreshes the session on the configured host', async () => {
     const supabase = await loadClient(CLOUD_URL);
     await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
     fetchMock.mockClear();
-
-    await supabase.auth.refreshSession();
-
-    expect(requestedUrls()).toEqual([`${PROXY_URL}/auth/v1/token?grant_type=refresh_token`]);
-  });
-
-  // A network that blocks the proxy host must not stop the session refreshing
-  // (#7538): the refresh then goes to the Supabase host, as before the proxy.
-  it('refreshes on the Supabase host when the proxy cannot be reached', async () => {
-    const supabase = await loadClient(CLOUD_URL);
-    await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
-    fetchMock.mockClear();
-    fetchMock.mockImplementation(async (input) => {
-      if (new URL(String(input)).origin === PROXY_URL) throw new TypeError('Failed to fetch');
-      return new Response(JSON.stringify({ ...session, access_token: 'access-2' }), {
-        status: 200,
-      });
-    });
-
-    // Fake timers run out the SDK's retries if the refresh keeps failing.
-    vi.useFakeTimers();
-    const refresh = supabase.auth.refreshSession();
-    await vi.advanceTimersByTimeAsync(35_000);
-    const { data, error } = await refresh;
-    vi.useRealTimers();
-
-    expect(error).toBeNull();
-    expect(data.session?.access_token).toBe('access-2');
-    expect(requestedUrls()).toEqual([
-      `${PROXY_URL}/auth/v1/token?grant_type=refresh_token`,
-      `${CLOUD_URL}/auth/v1/token?grant_type=refresh_token`,
-    ]);
-  });
-
-  it('refreshes on the Supabase host when the proxy never answers', async () => {
-    const supabase = await loadClient(CLOUD_URL);
-    await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
-    fetchMock.mockClear();
-    fetchMock.mockImplementation(async (input, init) => {
-      if (new URL(String(input)).origin === PROXY_URL) {
-        return new Promise<Response>((_, reject) => {
-          init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
-        });
-      }
-      return new Response(JSON.stringify({ ...session, access_token: 'access-2' }), {
-        status: 200,
-      });
-    });
-
-    vi.useFakeTimers();
-    let finished = false;
-    const refresh = supabase.auth.refreshSession().finally(() => (finished = true));
-    await vi.advanceTimersByTimeAsync(35_000);
-    vi.useRealTimers();
-    expect(finished, 'the refresh falls back to the Supabase host in time').toBe(true);
-    const { data, error } = await refresh;
-
-    expect(error).toBeNull();
-    expect(data.session?.access_token).toBe('access-2');
-    expect(requestedUrls()).toEqual([
-      `${PROXY_URL}/auth/v1/token?grant_type=refresh_token`,
-      `${CLOUD_URL}/auth/v1/token?grant_type=refresh_token`,
-    ]);
-  });
-
-  it('keeps the proxy answer when the proxy can be reached', async () => {
-    const supabase = await loadClient(CLOUD_URL);
-    await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
-    fetchMock.mockClear();
-    fetchMock.mockImplementation(async () =>
-      Response.json({ code: 'refresh_token_not_found', message: 'Invalid' }, { status: 400 }),
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ...session, access_token: 'access-2' }), { status: 200 }),
     );
 
-    const { error } = await supabase.auth.refreshSession();
+    const { data, error } = await supabase.auth.refreshSession();
 
-    expect(error?.status).toBe(400);
-    expect(requestedUrls()).toEqual([`${PROXY_URL}/auth/v1/token?grant_type=refresh_token`]);
+    expect(error).toBeNull();
+    expect(data.session?.access_token).toBe('access-2');
+    expect(requestedUrls()).toEqual([`${CLOUD_URL}/auth/v1/token?grant_type=refresh_token`]);
   });
 
-  it('signs out through the proxy so a blocked network can drop the session', async () => {
+  it('signs out on the configured host and drops the local session', async () => {
     const supabase = await loadClient(CLOUD_URL);
     await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
     fetchMock.mockClear();
@@ -139,12 +74,12 @@ describe('Readest Cloud auth routing (#6416)', () => {
 
     await supabase.auth.signOut({ scope: 'local' });
 
-    expect(requestedUrls()).toEqual([`${PROXY_URL}/auth/v1/logout?scope=local`]);
+    expect(requestedUrls()).toEqual([`${CLOUD_URL}/auth/v1/logout?scope=local`]);
     const { data } = await supabase.auth.getSession();
     expect(data.session).toBeNull();
   });
 
-  it('keeps every other auth call on the Supabase host', async () => {
+  it('keeps every other auth call on the configured host', async () => {
     const supabase = await loadClient(CLOUD_URL);
 
     await supabase.auth.signInWithOtp({ email: 'a@b.c' });
@@ -159,7 +94,7 @@ describe('Readest Cloud auth routing (#6416)', () => {
     }
   });
 
-  it('keeps OAuth on the Supabase host, where its callback lands', async () => {
+  it('keeps OAuth on the configured host, where its callback lands', async () => {
     const supabase = await loadClient(CLOUD_URL);
 
     const { data } = await supabase.auth.signInWithOAuth({
@@ -171,7 +106,18 @@ describe('Readest Cloud auth routing (#6416)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('never sends a self-hosted instance password to the Readest proxy', async () => {
+  it('never contacts a readest.com host, whatever the configured project is', async () => {
+    const supabase = await loadClient(CLOUD_URL);
+
+    await supabase.auth.signInWithPassword({ email: 'a@b.c', password: 'pw' });
+    await supabase.auth.refreshSession();
+
+    for (const url of requestedUrls()) {
+      expect(url.includes('.readest.com')).toBe(false);
+    }
+  });
+
+  it('never sends a self-hosted instance password anywhere else', async () => {
     const selfHosted = 'https://supabase.example.org';
     const supabase = await loadClient(selfHosted);
 

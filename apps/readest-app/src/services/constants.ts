@@ -50,12 +50,16 @@ import { DEFAULT_ANNOTATION_TOOLBAR_ITEMS } from '@/utils/annotationToolbar';
 import { DEFAULT_PARAGRAPH_GAP_SEC, DEFAULT_SENTENCE_GAP_SEC } from './tts/gap';
 
 export const DATA_SUBDIR = 'Readest';
-export const LOCAL_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
+// On-device folders use the Leaflet name; cloud (Drive/WebDAV) prefixes keep
+// the legacy DATA_SUBDIR so remote layouts stay wire-compatible.
+export const LOCAL_DATA_SUBDIR = 'Leaflet';
 export const CLOUD_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
 export const CLOUD_REPLICAS_SUBDIR = `${DATA_SUBDIR}/Replicas`;
-export const LOCAL_FONTS_SUBDIR = `${DATA_SUBDIR}/Fonts`;
-export const LOCAL_IMAGES_SUBDIR = `${DATA_SUBDIR}/Images`;
-export const LOCAL_DICTIONARIES_SUBDIR = `${DATA_SUBDIR}/Dictionaries`;
+export const LOCAL_BOOKS_SUBDIR = `${LOCAL_DATA_SUBDIR}/Books`;
+export const LOCAL_FONTS_SUBDIR = `${LOCAL_DATA_SUBDIR}/Fonts`;
+export const LOCAL_IMAGES_SUBDIR = `${LOCAL_DATA_SUBDIR}/Images`;
+export const LOCAL_DICTIONARIES_SUBDIR = `${LOCAL_DATA_SUBDIR}/Dictionaries`;
+export const LEGACY_LOCAL_DATA_SUBDIR = 'Readest';
 
 export const SETTINGS_FILENAME = 'settings.json';
 
@@ -992,7 +996,7 @@ export const BOOK_IDS_SEPARATOR = '+';
 export const DOWNLOAD_READEST_URL = 'https://readest.com?utm_source=readest_web';
 
 export const READEST_WEB_BASE_URL = 'https://web.readest.com';
-export const READEST_NODE_BASE_URL = 'https://node.readest.com';
+export const READEST_NODE_BASE_URL = 'https://node.leaflet.invalid';
 
 export const SHARE_BASE_URL = `${READEST_WEB_BASE_URL}/s`;
 export const SHARE_EXPIRATION_DAYS = [1, 3, 7] as const;
@@ -1015,13 +1019,13 @@ export const SHARE_TOKEN_LENGTH = 22;
 export const SHARE_PRESIGN_TTL_SECONDS = 300;
 export const SHARE_CFI_MAX_LENGTH = 512;
 
-const LATEST_DOWNLOAD_BASE_URL = 'https://download.readest.com/releases';
+const LATEST_DOWNLOAD_BASE_URL = 'https://updates.leaflet.invalid/releases';
 
 export const READEST_UPDATER_FILE = `${LATEST_DOWNLOAD_BASE_URL}/latest.json`;
 
 export const READEST_CHANGELOG_FILE = `${LATEST_DOWNLOAD_BASE_URL}/release-notes.json`;
 
-export const READEST_NIGHTLY_UPDATER_FILE = 'https://download.readest.com/nightly/latest.json';
+export const READEST_NIGHTLY_UPDATER_FILE = 'https://updates.leaflet.invalid/nightly/latest.json';
 
 // Public (verification) key, identical to src-tauri/tauri.conf.json `updater.pubkey`.
 // Used to verify nightly artifacts in the custom install flows (portable /
@@ -1034,7 +1038,7 @@ export const READEST_PUBLIC_STORAGE_BASE_URL = 'https://storage.readest.com';
 // (e.g. published book covers) are linked through this host.
 export const READEST_PUBLIC_ASSETS_BASE_URL = 'https://assets.readest.com';
 
-export const READEST_OPDS_USER_AGENT = 'Readest/1.0 (OPDS Browser)';
+export const READEST_OPDS_USER_AGENT = 'Leaflet/1.0 (OPDS Browser)';
 
 export const SYNC_PROGRESS_INTERVAL_SEC = 3;
 export const SYNC_NOTES_INTERVAL_SEC = 5;

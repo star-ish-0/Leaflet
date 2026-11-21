@@ -674,6 +674,8 @@ pub fn run() {
         .plugin(tauri_plugin_oauth::init())
         .invoke_handler(tauri::generate_handler![
             start_server,
+            #[cfg(target_os = "android")]
+            android::bootstrap::bootstrap_document_dir,
             download_file,
             upload_file,
             get_environment_variable,
@@ -777,9 +779,6 @@ pub fn run() {
     );
 
     let builder = builder.plugin(tauri_plugin_deep_link::init());
-
-    #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
 
     // Strip invalid geometry from the saved window state before the
     // window-state plugin loads it, so a bad `.window-state.json` (e.g. the

@@ -23,6 +23,7 @@ import {
   appConfigDir,
   appCacheDir,
   appLogDir,
+  documentDir,
   tempDir,
 } from '@tauri-apps/api/path';
 import { type as osType } from '@tauri-apps/plugin-os';
@@ -63,7 +64,7 @@ import {
 import { DatabaseOpts, DatabaseService } from '@/types/database';
 import { SchemaType } from '@/services/database/migrate';
 import {
-  DATA_SUBDIR,
+  LOCAL_DATA_SUBDIR,
   LOCAL_BOOKS_SUBDIR,
   LOCAL_DICTIONARIES_SUBDIR,
   LOCAL_FONTS_SUBDIR,
@@ -178,6 +179,14 @@ const getPathResolver = ({
 } = {}) => {
   const customBaseDir = customRootDir ? 0 : undefined;
   const isCustomBaseDir = Boolean(customRootDir);
+  // Android: keep the library and its data in the app's external files dir
+  // (`Android/data/<package>/files/documents/Leaflet/...`) instead of the
+  // internal-only `activity.dataDir`, so files can be delivered with adb,
+  // Shizuku, or root and be seen by the user's file manager. Without a custom
+  // root dir every base below resolves to `BaseDirectory.Document`, which the
+  // Kotlin PathPlugin maps to `getExternalFilesDir(DIRECTORY_DOCUMENTS)`.
+  const androidDefaultBase =
+    OS_TYPE === 'android' && !isCustomBaseDir ? BaseDirectory.Document : undefined;
   const getCustomBasePrefixSync = isCustomBaseDir
     ? (baseDir: BaseDir) => {
         return () => {
@@ -219,17 +228,17 @@ const getPathResolver = ({
         };
       case 'Data':
         return {
-          baseDir: customBaseDir ?? BaseDirectory.AppData,
-          basePrefix: customBasePrefix ?? appDataDir,
+          baseDir: customBaseDir ?? androidDefaultBase ?? BaseDirectory.AppData,
+          basePrefix: customBasePrefix ?? (androidDefaultBase ? documentDir : appDataDir),
           fp: customBasePrefixSync
-            ? `${customBasePrefixSync()}/${DATA_SUBDIR}${path ? `/${path}` : ''}`
-            : `${DATA_SUBDIR}${path ? `/${path}` : ''}`,
+            ? `${customBasePrefixSync()}/${LOCAL_DATA_SUBDIR}${path ? `/${path}` : ''}`
+            : `${LOCAL_DATA_SUBDIR}${path ? `/${path}` : ''}`,
           base,
         };
       case 'Books':
         return {
-          baseDir: customBaseDir ?? BaseDirectory.AppData,
-          basePrefix: customBasePrefix || appDataDir,
+          baseDir: customBaseDir ?? androidDefaultBase ?? BaseDirectory.AppData,
+          basePrefix: customBasePrefix || (androidDefaultBase ? documentDir : appDataDir),
           fp: customBasePrefixSync
             ? `${customBasePrefixSync()}/${LOCAL_BOOKS_SUBDIR}${path ? `/${path}` : ''}`
             : `${LOCAL_BOOKS_SUBDIR}${path ? `/${path}` : ''}`,
@@ -237,8 +246,8 @@ const getPathResolver = ({
         };
       case 'Fonts':
         return {
-          baseDir: customBaseDir ?? BaseDirectory.AppData,
-          basePrefix: customBasePrefix || appDataDir,
+          baseDir: customBaseDir ?? androidDefaultBase ?? BaseDirectory.AppData,
+          basePrefix: customBasePrefix || (androidDefaultBase ? documentDir : appDataDir),
           fp: customBasePrefixSync
             ? `${customBasePrefixSync()}/${LOCAL_FONTS_SUBDIR}${path ? `/${path}` : ''}`
             : `${LOCAL_FONTS_SUBDIR}${path ? `/${path}` : ''}`,
@@ -246,8 +255,8 @@ const getPathResolver = ({
         };
       case 'Images':
         return {
-          baseDir: customBaseDir ?? BaseDirectory.AppData,
-          basePrefix: customBasePrefix || appDataDir,
+          baseDir: customBaseDir ?? androidDefaultBase ?? BaseDirectory.AppData,
+          basePrefix: customBasePrefix || (androidDefaultBase ? documentDir : appDataDir),
           fp: customBasePrefixSync
             ? `${customBasePrefixSync()}/${LOCAL_IMAGES_SUBDIR}${path ? `/${path}` : ''}`
             : `${LOCAL_IMAGES_SUBDIR}${path ? `/${path}` : ''}`,
@@ -255,8 +264,8 @@ const getPathResolver = ({
         };
       case 'Dictionaries':
         return {
-          baseDir: customBaseDir ?? BaseDirectory.AppData,
-          basePrefix: customBasePrefix || appDataDir,
+          baseDir: customBaseDir ?? androidDefaultBase ?? BaseDirectory.AppData,
+          basePrefix: customBasePrefix || (androidDefaultBase ? documentDir : appDataDir),
           fp: customBasePrefixSync
             ? `${customBasePrefixSync()}/${LOCAL_DICTIONARIES_SUBDIR}${path ? `/${path}` : ''}`
             : `${LOCAL_DICTIONARIES_SUBDIR}${path ? `/${path}` : ''}`,
@@ -643,6 +652,17 @@ export class NativeAppService extends BaseAppService {
   }
 
   override async init() {
+    if (OS_TYPE === 'android') {
+      // One-shot move of the legacy internal library (`appDataDir/Readest`)
+      // into the external files dir the resolver now points at. Must finish
+      // before anything reads the library, so it is awaited, never fire-and-
+      // forget; a no-op (marker file) on every later launch.
+      try {
+        await invoke('bootstrap_document_dir');
+      } catch (err) {
+        console.warn('[nativeAppService] bootstrap_document_dir failed:', err);
+      }
+    }
     // Listener setup is allowed to overlap the rest of startup. The worker
     // waits for it before emitting cached or newly-generated thumbnails.
     void this.startCoverThumbnailListener().catch(() => {});

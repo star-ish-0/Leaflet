@@ -14,21 +14,8 @@ describe('supabase session storage key', () => {
     vi.unstubAllEnvs();
   });
 
-  it('defaults to the Readest Cloud project URL', () => {
-    expect(atob(process.env['NEXT_PUBLIC_DEFAULT_SUPABASE_URL_BASE64']!)).toBe(
-      'https://vbsyxfusjjqdxkjqlysc.supabase.co',
-    );
-  });
-
-  it.each([
-    'https://readest.supabase.co',
-    'https://vbsyxfusjjqdxkjqlysc.supabase.co',
-    'https://auth.readest.com',
-  ])('keeps the original session key for Readest Cloud at %s', async (url) => {
-    expect(await loadStorageKey(url)).toBe('sb-readest-auth-token');
-  });
-
-  it('keeps the host-derived key for a self-hosted instance', async () => {
-    expect(await loadStorageKey('http://localhost:54321')).toBe('sb-localhost-auth-token');
+  it('is a fixed Leaflet key, independent of the configured host', async () => {
+    expect(await loadStorageKey('https://example.supabase.co')).toBe('sb-leaflet-auth-token');
+    expect(await loadStorageKey('http://localhost:54321')).toBe('sb-leaflet-auth-token');
   });
 });

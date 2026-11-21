@@ -74,8 +74,8 @@ describe('iOS file associations', () => {
         name: 'AZW Document',
         contentTypes: ['com.amazon.azw', 'com.amazon.azw3'],
       },
-      fb2: { name: 'FB2 Document', contentTypes: ['com.readest.fb2'] },
-      cbz: { name: 'CBZ Archive', contentTypes: ['com.readest.cbz'] },
+      fb2: { name: 'FB2 Document', contentTypes: ['com.leaflet.fb2'] },
+      cbz: { name: 'CBZ Archive', contentTypes: ['com.leaflet.cbz'] },
       pdf: { name: 'PDF Document', contentTypes: ['com.adobe.pdf'] },
       txt: { name: 'Text File', contentTypes: ['public.plain-text'] },
       md: {

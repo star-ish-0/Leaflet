@@ -516,17 +516,24 @@ describe('the Context Dictionary tool (#7497)', () => {
     expect(screen.getByTestId('dictionary-surface').dataset['contextOnly']).toBe('false');
   });
 
-  test.each([
-    ['an OpenAI-compatible translator', () => (h.contextTranslator = undefined)],
-    ['premium', () => (h.token = null)],
-  ])('is unavailable without %s', async (_name, withhold) => {
-    withhold();
+  test('is unavailable without an OpenAI-compatible translator', async () => {
+    h.contextTranslator = undefined;
     h.viewSettings.annotationToolbarItems = ['contextdictionary'];
     render(<Annotator bookKey='book-1' contentInsets={{ top: 0, right: 0, bottom: 0, left: 0 }} />);
     await selectText('Welten');
 
     const button = screen.getByRole('button', { name: 'Context Dictionary' }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
+  });
+
+  test('stays available without premium — there is no paywall', async () => {
+    h.token = null;
+    h.viewSettings.annotationToolbarItems = ['contextdictionary'];
+    render(<Annotator bookKey='book-1' contentInsets={{ top: 0, right: 0, bottom: 0, left: 0 }} />);
+    await selectText('Welten');
+
+    const button = screen.getByRole('button', { name: 'Context Dictionary' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
   });
 });
 

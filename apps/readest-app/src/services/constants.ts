@@ -50,12 +50,16 @@ import { DEFAULT_ANNOTATION_TOOLBAR_ITEMS } from '@/utils/annotationToolbar';
 import { DEFAULT_PARAGRAPH_GAP_SEC, DEFAULT_SENTENCE_GAP_SEC } from './tts/gap';
 
 export const DATA_SUBDIR = 'Readest';
-export const LOCAL_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
+// On-device folders use the Leaflet name; cloud (Drive/WebDAV) prefixes keep
+// the legacy DATA_SUBDIR so remote layouts stay wire-compatible.
+export const LOCAL_DATA_SUBDIR = 'Leaflet';
 export const CLOUD_BOOKS_SUBDIR = `${DATA_SUBDIR}/Books`;
 export const CLOUD_REPLICAS_SUBDIR = `${DATA_SUBDIR}/Replicas`;
-export const LOCAL_FONTS_SUBDIR = `${DATA_SUBDIR}/Fonts`;
-export const LOCAL_IMAGES_SUBDIR = `${DATA_SUBDIR}/Images`;
-export const LOCAL_DICTIONARIES_SUBDIR = `${DATA_SUBDIR}/Dictionaries`;
+export const LOCAL_BOOKS_SUBDIR = `${LOCAL_DATA_SUBDIR}/Books`;
+export const LOCAL_FONTS_SUBDIR = `${LOCAL_DATA_SUBDIR}/Fonts`;
+export const LOCAL_IMAGES_SUBDIR = `${LOCAL_DATA_SUBDIR}/Images`;
+export const LOCAL_DICTIONARIES_SUBDIR = `${LOCAL_DATA_SUBDIR}/Dictionaries`;
+export const LEGACY_LOCAL_DATA_SUBDIR = 'Readest';
 
 export const SETTINGS_FILENAME = 'settings.json';
 

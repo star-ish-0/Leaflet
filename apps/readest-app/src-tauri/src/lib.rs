@@ -674,6 +674,8 @@ pub fn run() {
         .plugin(tauri_plugin_oauth::init())
         .invoke_handler(tauri::generate_handler![
             start_server,
+            #[cfg(target_os = "android")]
+            android::bootstrap::bootstrap_document_dir,
             download_file,
             upload_file,
             get_environment_variable,
